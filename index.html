@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>صلوات‌شمار شفا — تسبیح دیجیتال صلوات</title>
+<meta name="description" content="تسبیح دیجیتال رایگان برای شمارش صلوات. کاملا آفلاین، بدون تبلیغات و بدون نیاز به ثبت‌نام.">
+<meta name="theme-color" content="#06231b">
+<link rel="icon" type="image/png" href="webapp/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="landing.css">
+</head>
+<body>
+
+  <div class="glow glow-a"></div>
+  <div class="glow glow-b"></div>
+
+  <main class="wrap">
+
+    <div class="arch">
+      <svg class="arch-svg" viewBox="0 0 220 170" aria-hidden="true">
+        <path class="arch-path" d="M10,168 L10,90 C10,55 40,45 55,45 C40,45 42,10 110,4 C178,10 180,45 165,45 C180,45 210,55 210,90 L210,168" />
+      </svg>
+      <svg class="dome-svg" viewBox="0 0 100 90" aria-hidden="true">
+        <defs>
+          <mask id="crescentMask">
+            <rect x="0" y="0" width="100" height="100" fill="#fff" />
+            <circle cx="57" cy="15" r="7.5" fill="#000" />
+          </mask>
+        </defs>
+        <path class="dome-shape" d="M50,6 Q22,34 31,53 Q37,66 50,66 Q63,66 69,53 Q78,34 50,6 Z" />
+        <rect class="dome-base" x="31" y="64" width="38" height="7" rx="2" />
+        <circle class="crescent" cx="52" cy="15" r="9" mask="url(#crescentMask)" />
+      </svg>
+    </div>
+
+    <h1 class="headline">صلوات‌شمار شفا</h1>
+    <p class="subhead">تسبیح دیجیتال صلوات؛ ساده، رایگان و همیشه همراه شما — حتی وقتی اینترنت ندارید.</p>
+
+    <div class="phone-frame">
+      <div class="phone-notch"></div>
+      <iframe class="phone-screen" src="webapp/index.html" title="پیش‌نمایش زنده صلوات‌شمار" loading="lazy"></iframe>
+      <div class="phone-home-bar"></div>
+    </div>
+
+    <div class="cta-row">
+      <a href="webapp/index.html" class="btn btn-primary">ورود به نسخه وب</a>
+      <a href="webapp/index.html#install" class="btn btn-ghost">دانلود اپلیکیشن</a>
+    </div>
+    <p class="cta-note">نصب مستقیم از مرورگر — بدون نیاز به گوگل‌پلی یا اپ‌استور</p>
+
+    <section class="thread" aria-label="ویژگی‌ها">
+      <div class="thread-line" aria-hidden="true"></div>
+
+      <div class="thread-item">
+        <span class="thread-bead" aria-hidden="true"></span>
+        <div class="thread-text">
+          <h3>یک لمس، یک صلوات</h3>
+          <p>با هر لمس، یکی از دانه‌های تسبیح ۳۳ تایی روشن می‌شود و دور شمارش پیش می‌رود.</p>
+        </div>
+      </div>
+
+      <div class="thread-item">
+        <span class="thread-bead" aria-hidden="true"></span>
+        <div class="thread-text">
+          <h3>کاملا آفلاین</h3>
+          <p>بعد از اولین باز کردن، حتی بدون اینترنت هم کار می‌کند — همه‌جا همراه شماست.</p>
+        </div>
+      </div>
+
+      <div class="thread-item">
+        <span class="thread-bead" aria-hidden="true"></span>
+        <div class="thread-text">
+          <h3>پیشرفت شما ذخیره می‌شود</h3>
+          <p>شمارش فعلی و بهترین رکوردتان روی گوشی ذخیره می‌ماند، حتی بعد از بستن اپ.</p>
+        </div>
+      </div>
+
+      <div class="thread-item">
+        <span class="thread-bead" aria-hidden="true"></span>
+        <div class="thread-text">
+          <h3>صدای صلوات</h3>
+          <p>با لمس متن عربی، صلوات با صدا پخش می‌شود.</p>
+        </div>
+      </div>
+
+      <div class="thread-item">
+        <span class="thread-bead tassel" aria-hidden="true"></span>
+        <div class="thread-text">
+          <h3>کاملا رایگان</h3>
+          <p>بدون تبلیغات، بدون ثبت‌نام و بدون هیچ‌گونه هزینه‌ای.</p>
+        </div>
+      </div>
+    </section>
+
+    <footer class="site-footer">
+      <span>developed with rimnova</span>
+    </footer>
+
+  </main>
+
+  <script>
+    function fitPhonePreview() {
+      var frame = document.querySelector(".phone-frame");
+      var screen = document.querySelector(".phone-screen");
+      if (!frame || !screen) return;
+      var scale = frame.clientWidth / 380;
+      screen.style.transform = "scale(" + scale + ")";
+    }
+    window.addEventListener("load", fitPhonePreview);
+    window.addEventListener("resize", fitPhonePreview);
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,204 @@
+:root{
+  --bg-deep:   #06231b;
+  --bg-mid:    #0a3327;
+  --panel:     #0d3d2f;
+  --panel-2:   #0f4736;
+  --gold:      #e8c468;
+  --gold-hi:   #ffe9ab;
+  --gold-dim:  #8a712f;
+  --bead:      #3fae7a;
+  --text-warm: #f4eedd;
+  --text-muted:#9db8ab;
+}
+
+*{ margin:0; padding:0; box-sizing:border-box; }
+html,body{ height:100%; }
+
+body{
+  min-height:100vh;
+  min-height:100dvh;
+  background:
+    radial-gradient(ellipse 120% 60% at 50% -10%, #123f30 0%, transparent 55%),
+    linear-gradient(180deg, var(--bg-mid) 0%, var(--bg-deep) 45%);
+  font-family:'Vazirmatn', sans-serif;
+  color:var(--text-warm);
+  overflow-x:hidden;
+  position:relative;
+}
+
+.glow{ position:fixed; border-radius:50%; filter:blur(70px); pointer-events:none; z-index:0; }
+.glow-a{ width:280px; height:280px; top:-80px; right:-60px; background:radial-gradient(circle, rgba(232,196,104,.16), transparent 70%); }
+.glow-b{ width:320px; height:320px; bottom:0; left:-100px; background:radial-gradient(circle, rgba(63,174,122,.14), transparent 70%); }
+
+.wrap{
+  position:relative;
+  z-index:1;
+  max-width:520px;
+  margin:0 auto;
+  padding:48px 24px 32px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  text-align:center;
+}
+
+/* ---- arch + dome (shared brand mark) ---- */
+.arch{ position:relative; width:110px; height:88px; margin-bottom:18px; }
+.arch-svg, .dome-svg{ position:absolute; inset:0; width:100%; height:100%; }
+.arch-path{ fill:none; stroke:var(--gold); stroke-width:5; }
+.dome-shape{ fill:var(--bead); opacity:.9; }
+.dome-base{ fill:var(--gold-dim); }
+.crescent{ fill:var(--gold-hi); }
+
+.headline{
+  font-size:clamp(28px, 7vw, 36px);
+  font-weight:800;
+  letter-spacing:-.01em;
+  margin-bottom:10px;
+}
+
+.subhead{
+  font-size:15px;
+  line-height:1.9;
+  color:var(--text-muted);
+  max-width:340px;
+  margin-bottom:32px;
+}
+
+/* ---- phone frame with live app preview ---- */
+.phone-frame{
+  position:relative;
+  width:min(240px, 62vw);
+  aspect-ratio: 380 / 880;
+  background:#04140f;
+  border:3px solid #12463580;
+  border-radius:34px;
+  box-shadow:
+    0 24px 60px -20px rgba(0,0,0,.6),
+    0 0 0 1px rgba(232,196,104,.08);
+  margin-bottom:30px;
+  overflow:hidden;
+}
+.phone-notch{
+  position:absolute;
+  top:0; left:50%; transform:translateX(-50%);
+  width:64px; height:16px;
+  background:#04140f;
+  border-radius:0 0 14px 14px;
+  z-index:2;
+}
+.phone-screen{
+  position:absolute;
+  top:0; left:0;
+  width:380px; height:880px;
+  border:none;
+  transform-origin: top left;
+  pointer-events:auto;
+}
+.phone-home-bar{
+  position:absolute;
+  bottom:8px; left:50%; transform:translateX(-50%);
+  width:70px; height:4px;
+  background:rgba(244,238,221,.35);
+  border-radius:99px;
+  z-index:2;
+}
+
+/* ---- CTAs ---- */
+.cta-row{
+  display:flex;
+  gap:12px;
+  width:100%;
+  max-width:360px;
+  margin-bottom:12px;
+}
+.btn{
+  flex:1;
+  padding:15px 12px;
+  border-radius:16px;
+  font-size:15px;
+  font-weight:700;
+  text-decoration:none;
+  text-align:center;
+  transition:transform .15s ease;
+}
+.btn:active{ transform:scale(.97); }
+.btn-primary{
+  background:linear-gradient(180deg, var(--gold-hi), var(--gold));
+  color:#1c2b22;
+}
+.btn-ghost{
+  background:rgba(232,196,104,.08);
+  border:1px solid rgba(232,196,104,.35);
+  color:var(--gold-hi);
+}
+.cta-note{
+  font-size:12.5px;
+  color:var(--text-muted);
+  margin-bottom:48px;
+}
+
+/* ---- feature list styled as a tasbih thread ---- */
+.thread{
+  position:relative;
+  width:100%;
+  max-width:380px;
+  text-align:right;
+  padding-inline-start:26px;
+  margin-bottom:44px;
+}
+.thread-line{
+  position:absolute;
+  top:6px; bottom:6px;
+  right:5px;
+  width:2px;
+  background:linear-gradient(180deg, var(--gold-dim), rgba(138,113,47,.15));
+}
+.thread-item{
+  position:relative;
+  display:flex;
+  gap:16px;
+  padding-bottom:28px;
+}
+.thread-item:last-child{ padding-bottom:0; }
+.thread-bead{
+  flex-shrink:0;
+  width:12px; height:12px;
+  border-radius:50%;
+  margin-top:5px;
+  background:radial-gradient(circle at 35% 30%, var(--gold-hi), var(--bead) 65%);
+  box-shadow:0 0 0 4px var(--bg-deep);
+  z-index:1;
+}
+.thread-bead.tassel{
+  background:radial-gradient(circle at 35% 30%, var(--gold-hi), var(--gold-dim) 70%);
+}
+.thread-text h3{
+  font-size:15.5px;
+  font-weight:700;
+  margin-bottom:4px;
+}
+.thread-text p{
+  font-size:13.5px;
+  line-height:1.9;
+  color:var(--text-muted);
+}
+
+/* ---- footer credit ---- */
+.site-footer{
+  padding-top:8px;
+  border-top:1px solid rgba(232,196,104,.12);
+  width:100%;
+  max-width:380px;
+}
+.site-footer span{
+  font-family:'Vazirmatn', sans-serif;
+  font-size:11px;
+  color:var(--text-muted);
+  opacity:.6;
+  letter-spacing:.02em;
+}
+
+@media (prefers-reduced-motion: reduce){
+  *{ transition-duration:.001ms !important; }
+}
