@@ -1,0 +1,162 @@
+name: Build Salavat Android AAB
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "webapp/**"
+      - "android/**"
+      - ".github/workflows/android-aab.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-android:
+    name: Build signed TWA
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Bubblewrap
+        run: npm install --global @bubblewrap/cli@1.24.1
+
+      - name: Prepare release keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$ANDROID_KEYSTORE_BASE64" || { echo "::error::Missing ANDROID_KEYSTORE_BASE64"; exit 1; }
+          test -n "$ANDROID_KEYSTORE_PASSWORD" || { echo "::error::Missing ANDROID_KEYSTORE_PASSWORD"; exit 1; }
+          test -n "$ANDROID_KEY_PASSWORD" || { echo "::error::Missing ANDROID_KEY_PASSWORD"; exit 1; }
+
+          mkdir -p android
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/android-keystore
+          chmod 600 android/android-keystore
+
+          keytool -list \
+            -keystore android/android-keystore \
+            -storepass "$ANDROID_KEYSTORE_PASSWORD" \
+            -alias android >/dev/null
+
+      - name: Generate TWA project
+        working-directory: android
+        env:
+          BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          # Bubblewrap init is interactive. All values except package ID and
+          # versionCode are accepted from the Web Manifest/defaults.
+          printf '\n\n\n\nir.rimnova.salavat\n1\n\n\n\n\n\n\n\n\n\n\n\n' \
+            | bubblewrap init \
+                --manifest="https://rimnova.github.io/salavat/webapp/manifest.json" \
+                --directory="."
+
+          # Keep the release version explicit and stable.
+          node - <<'NODE'
+          const fs = require('fs');
+          const p = 'twa-manifest.json';
+          const m = JSON.parse(fs.readFileSync(p, 'utf8'));
+          m.packageId = 'ir.rimnova.salavat';
+          m.appVersionCode = 1;
+          m.appVersion = '1.0.0';
+          m.appVersionName = '1.0.0';
+          m.signingKey = {
+            ...(m.signingKey || {}),
+            path: './android-keystore',
+            alias: 'android'
+          };
+          fs.writeFileSync(p, JSON.stringify(m, null, 2) + '\n');
+          NODE
+
+          bubblewrap update --manifest="twa-manifest.json" --skipVersionUpgrade
+
+      - name: Build signed AAB and APK
+        working-directory: android
+        env:
+          BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          bubblewrap build \
+            --manifest="twa-manifest.json" \
+            --signingKeyPath="./android-keystore" \
+            --signingKeyAlias="android" \
+            --skipPwaValidation
+
+      - name: Generate release certificate fingerprint
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          FP="$(keytool -list -v \
+            -keystore android-keystore \
+            -storepass "$ANDROID_KEYSTORE_PASSWORD" \
+            -alias android \
+            | awk -F': ' '/SHA256:/{print $2; exit}')"
+
+          test -n "$FP" || { echo "::error::Could not extract SHA-256 certificate fingerprint"; exit 1; }
+
+          cat > assetlinks.json <<EOF
+          [
+            {
+              "relation": ["delegate_permission/common.handle_all_urls"],
+              "target": {
+                "namespace": "android_app",
+                "package_name": "ir.rimnova.salavat",
+                "sha256_cert_fingerprints": ["$FP"]
+              }
+            }
+          ]
+          EOF
+
+          echo "Release certificate SHA-256: $FP"
+
+      - name: Upload AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: salavat-android-aab
+          path: android/app-release-bundle.aab
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: salavat-android-apk
+          path: android/app-release-signed.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload Digital Asset Links
+        uses: actions/upload-artifact@v4
+        with:
+          name: salavat-assetlinks
+          path: android/assetlinks.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Cleanup signing material
+        if: always()
+        run: |
+          rm -f android/android-keystore
