@@ -30,10 +30,19 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
-          node-version: "20"
+          node-version: "24"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: |
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
       - name: Install Bubblewrap
-        run: npm install --global @bubblewrap/cli@1.24.1
+        run: |
+          npm install --global @bubblewrap/cli@1.24.1
+          bubblewrap --version
 
       - name: Prepare release keystore
         env:
@@ -78,10 +87,10 @@ jobs:
         run: |
           set -euo pipefail
 
-          printf '\n\n\n\nir.rimnova.salavat\n1\n\n\n\n\n\n\n\n\n\n\n\n\ny\ny\n' \
-            | bubblewrap init \
-                --manifest="https://rimnova.github.io/salavat/webapp/manifest.json" \
-                --directory="."
+          bubblewrap init \
+            --manifest="https://rimnova.github.io/salavat/webapp/manifest.json" \
+            --directory="." \
+            --skipPwaValidation
 
           node - <<'NODE'
           const fs = require('fs');
@@ -118,7 +127,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          yes | bubblewrap build \
+          bubblewrap build \
             --manifest="twa-manifest.json" \
             --signingKeyPath="./android-keystore" \
             --signingKeyAlias="android" \
