@@ -1,321 +1,42 @@
-(() => {
-  "use strict";
+(()=>{'use strict';
+const TOTAL_BEADS=33, STORAGE_KEY='salavat_state_v1', EXTRA_KEY='salavat_extra_v1';
+const faDigits=['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];const toFa=n=>String(n).split('').map(c=>/\d/.test(c)?faDigits[c]:c).join('');
+const $=id=>document.getElementById(id), today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const countDisplay=$('countDisplay'),roundCountEl=$('roundCount'),bestCountEl=$('bestCount'),beadRing=$('beadRing'),clickBtn=$('clickBtn'),minusBtn=$('minusBtn'),resetBtn=$('resetBtn'),counterWrap=document.querySelector('.counter-wrap'),salawatText=$('salawatText');
+let state={total:0,inRound:0,rounds:0,best:0};let extra={goal:100,vibrate:true,sound:true,dark:false,history:{}};
+try{const x=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null');if(x)state={...state,...x};const y=JSON.parse(localStorage.getItem(EXTRA_KEY)||'null');if(y)extra={...extra,...y}}catch{}
+function save(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));localStorage.setItem(EXTRA_KEY,JSON.stringify(extra))}catch{}}
+function vibrate(ms){if(extra.vibrate&&navigator.vibrate)try{navigator.vibrate(ms)}catch{}}
+const SALAWAT_SPOKEN='اللَّهُمَّ صَلِّ عَلَی مُحَمَّدٍ وَ آلِ مُحَمَّد وَ عَجِّل فَرَجَهُم';let arabicVoice=null;let audioFileUsable=true;const salawatAudio=new Audio('salawat.mp3');salawatAudio.preload='none';
+function pickVoice(){if(!('speechSynthesis'in window))return;arabicVoice=speechSynthesis.getVoices().find(v=>/^ar/i.test(v.lang))||null}if('speechSynthesis'in window){pickVoice();speechSynthesis.addEventListener('voiceschanged',pickVoice)}
+function speak(){if(!extra.sound)return;if(salawatAudio&&audioFileUsable){salawatAudio.currentTime=0;salawatText.classList.add('playing');const p=salawatAudio.play();if(p)p.catch(()=>{audioFileUsable=false;speakFallback()});return} speakFallback()}
+function speakFallback(){if(!('speechSynthesis'in window))return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(SALAWAT_SPOKEN);u.lang=arabicVoice?arabicVoice.lang:'ar-SA';if(arabicVoice)u.voice=arabicVoice;u.rate=.82;salawatText.classList.add('playing');u.onend=u.onerror=()=>salawatText.classList.remove('playing');speechSynthesis.speak(u)}
+salawatAudio.onerror=()=>audioFileUsable=false;salawatAudio.onended=()=>salawatText.classList.remove('playing');salawatText.addEventListener('click',()=>{vibrate(10);speak()});salawatText.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();speak()}});
+const beads=[];function buildBeads(){beadRing.innerHTML='';beads.length=0;const r=beadRing.clientWidth/2||118;for(let i=0;i<TOTAL_BEADS;i++){const a=i/TOTAL_BEADS*Math.PI*2-Math.PI/2,b=document.createElement('div');b.className='bead';if(i===32)b.classList.add('tassel');b.style.left=(r+r*Math.cos(a))+'px';b.style.top=(r+r*Math.sin(a))+'px';beadRing.appendChild(b);beads.push(b)}}
+function todayCount(){return extra.history[today()]||0}function updateHistory(){const d=today();extra.history[d]=(extra.history[d]||0)+1;const keys=Object.keys(extra.history).sort();if(keys.length>30)delete extra.history[keys[0]]}
+function render(){countDisplay.textContent=toFa(state.total);roundCountEl.textContent=toFa(state.rounds);bestCountEl.textContent=toFa(state.best);beads.forEach((b,i)=>b.classList.toggle('lit',i<state.inRound));document.documentElement.classList.toggle('night',!!extra.dark);}
+function pulse(){countDisplay.classList.remove('pulse');void countDisplay.offsetWidth;countDisplay.classList.add('pulse')}
+function ripple(e){const r=clickBtn.getBoundingClientRect(),s=Math.max(r.width,r.height),q=document.createElement('span');q.className='ripple';let x=r.width/2,y=r.height/2;if(e&&typeof e.clientX==='number'){x=e.clientX-r.left;y=e.clientY-r.top}q.style.cssText=`width:${s}px;height:${s}px;left:${x-s/2}px;top:${y-s/2}px`;clickBtn.appendChild(q);q.addEventListener('animationend',()=>q.remove())}
+function announceGoal(goal){
+  const msg='ماشاءالله! به هدف '+goal+' صلوات رسیدی 🌿';
+  try{ if(extra.sound && 'speechSynthesis' in window){ speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(msg); u.lang='fa-IR'; u.rate=.95; speechSynthesis.speak(u); } }catch(e){}
+  try{ if('Notification' in window && Notification.permission==='granted') new Notification('صلوات‌شمار شفا',{body:msg}); }catch(e){}
+  alert(msg);
+}
 
-  const TOTAL_BEADS = 33;
-  const STORAGE_KEY = "salavat_state_v1";
-
-  const faDigits = ["۰","۱","۲","۳","۴","۵","۶","۷","۸","۹"];
-  const toFa = (n) => String(n).split("").map(ch => (ch >= "0" && ch <= "9") ? faDigits[ch] : ch).join("");
-
-  const countDisplay = document.getElementById("countDisplay");
-  const roundCountEl = document.getElementById("roundCount");
-  const bestCountEl = document.getElementById("bestCount");
-  const beadRing = document.getElementById("beadRing");
-  const clickBtn = document.getElementById("clickBtn");
-  const minusBtn = document.getElementById("minusBtn");
-  const resetBtn = document.getElementById("resetBtn");
-  const counterWrap = document.querySelector(".counter-wrap");
-  const salawatText = document.getElementById("salawatText");
-
-  // ---- spoken salawat ----
-  // Preferred: a real recorded voice at ./salawat.mp3 (add this file yourself —
-  // see the README for where to get one). Falls back to on-device text-to-speech
-  // automatically if the file isn't present.
-  const SALAWAT_SPOKEN = "اللَّهُمَّ صَلِّ عَلَی مُحَمَّدٍ وَ آلِ مُحَمَّد وَ عَجِّل فَرَجَهُم";
-  const salawatAudio = new Audio("salawat.mp3");
-  salawatAudio.preload = "none";
-  let audioFileUsable = true; // becomes false if salawat.mp3 fails to load
-
-  let arabicVoice = null;
-  function pickArabicVoice() {
-    if (!("speechSynthesis" in window)) return;
-    const voices = speechSynthesis.getVoices();
-    arabicVoice = voices.find(v => /^ar/i.test(v.lang)) || null;
-  }
-  if ("speechSynthesis" in window) {
-    pickArabicVoice();
-    speechSynthesis.addEventListener("voiceschanged", pickArabicVoice);
-  }
-
-  function speakFallback() {
-    if (!("speechSynthesis" in window)) return;
-    speechSynthesis.cancel();
-    const utter = new SpeechSynthesisUtterance(SALAWAT_SPOKEN);
-    utter.lang = arabicVoice ? arabicVoice.lang : "ar-SA";
-    if (arabicVoice) utter.voice = arabicVoice;
-    utter.rate = 0.82;
-    utter.pitch = 1.0;
-    salawatText.classList.add("playing");
-    utter.onend = () => salawatText.classList.remove("playing");
-    utter.onerror = () => salawatText.classList.remove("playing");
-    speechSynthesis.speak(utter);
-  }
-
-  function playSalawat() {
-    vibrate(10);
-    if (audioFileUsable) {
-      salawatAudio.currentTime = 0;
-      salawatText.classList.add("playing");
-      const playPromise = salawatAudio.play();
-      if (playPromise && playPromise.catch) {
-        playPromise.catch(() => {
-          audioFileUsable = false;
-          salawatText.classList.remove("playing");
-          speakFallback();
-        });
-      }
-      return;
-    }
-    speakFallback();
-  }
-
-  salawatAudio.addEventListener("ended", () => salawatText.classList.remove("playing"));
-  salawatAudio.addEventListener("error", () => { audioFileUsable = false; });
-
-  salawatText.addEventListener("click", playSalawat);
-  salawatText.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      playSalawat();
-    }
-  });
-
-  // ---- state ----
-  let state = {
-    total: 0,      // all-time count within current round-cycle tracking
-    inRound: 0,    // 0..32 progress within current round
-    rounds: 0,     // completed rounds
-    best: 0        // best total ever recorded
-  };
-
-  function loadState() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        state = Object.assign(state, parsed);
-      }
-    } catch (e) { /* ignore corrupt storage */ }
-  }
-
-  function saveState() {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    } catch (e) { /* storage unavailable */ }
-  }
-
-  // ---- build the bead ring ----
-  const beads = [];
-  function buildBeadRing() {
-    beadRing.innerHTML = "";
-    beads.length = 0;
-    const radius = beadRing.parentElement.querySelector("#countDisplay") ?
-      (beadRing.clientWidth / 2) : 110;
-    const r = beadRing.clientWidth / 2 || 118;
-    for (let i = 0; i < TOTAL_BEADS; i++) {
-      const angle = (i / TOTAL_BEADS) * Math.PI * 2 - Math.PI / 2;
-      const x = r + r * Math.cos(angle);
-      const y = r + r * Math.sin(angle);
-      const bead = document.createElement("div");
-      bead.className = "bead";
-      if (i === TOTAL_BEADS - 1) bead.classList.add("tassel");
-      bead.style.left = x + "px";
-      bead.style.top = y + "px";
-      beadRing.appendChild(bead);
-      beads.push(bead);
-    }
-  }
-
-  function renderBeads() {
-    beads.forEach((bead, i) => {
-      bead.classList.toggle("lit", i < state.inRound);
-    });
-  }
-
-  function vibrate(ms) {
-    if (navigator.vibrate) {
-      try { navigator.vibrate(ms); } catch (e) {}
-    }
-  }
-
-  function render() {
-    countDisplay.textContent = toFa(state.total);
-    roundCountEl.textContent = toFa(state.rounds);
-    bestCountEl.textContent = toFa(state.best);
-    renderBeads();
-  }
-
-  function pulseCount() {
-    countDisplay.classList.remove("pulse");
-    // force reflow to restart animation
-    void countDisplay.offsetWidth;
-    countDisplay.classList.add("pulse");
-  }
-
-  function flashRingComplete() {
-    counterWrap.classList.add("ring-complete");
-    setTimeout(() => counterWrap.classList.remove("ring-complete"), 550);
-  }
-
-  function spawnRipple(evt) {
-    const rect = clickBtn.getBoundingClientRect();
-    const ripple = document.createElement("span");
-    ripple.className = "ripple";
-    const size = Math.max(rect.width, rect.height);
-    let x, y;
-    if (evt && evt.touches && evt.touches[0]) {
-      x = evt.touches[0].clientX - rect.left;
-      y = evt.touches[0].clientY - rect.top;
-    } else if (evt && typeof evt.clientX === "number" && evt.clientX !== 0) {
-      x = evt.clientX - rect.left;
-      y = evt.clientY - rect.top;
-    } else {
-      x = rect.width / 2;
-      y = rect.height / 2;
-    }
-    ripple.style.width = ripple.style.height = size + "px";
-    ripple.style.left = (x - size / 2) + "px";
-    ripple.style.top = (y - size / 2) + "px";
-    clickBtn.appendChild(ripple);
-    ripple.addEventListener("animationend", () => ripple.remove());
-  }
-
-  function increment(evt) {
-    state.total += 1;
-    state.inRound += 1;
-    if (state.inRound >= TOTAL_BEADS) {
-      state.inRound = 0;
-      state.rounds += 1;
-      flashRingComplete();
-      vibrate([15, 40, 15]);
-    } else {
-      vibrate(12);
-    }
-    if (state.total > state.best) state.best = state.total;
-    saveState();
-    render();
-    pulseCount();
-    spawnRipple(evt);
-  }
-
-  function decrement() {
-    if (state.total <= 0) return;
-    state.total -= 1;
-    if (state.inRound > 0) {
-      state.inRound -= 1;
-    } else if (state.rounds > 0) {
-      state.rounds -= 1;
-      state.inRound = TOTAL_BEADS - 1;
-    }
-    saveState();
-    render();
-    vibrate(8);
-  }
-
-  function reset() {
-    state.total = 0;
-    state.inRound = 0;
-    state.rounds = 0;
-    // best score is preserved intentionally
-    saveState();
-    render();
-  }
-
-  // ---- events ----
-  clickBtn.addEventListener("click", increment);
-  minusBtn.addEventListener("click", decrement);
-  resetBtn.addEventListener("click", () => {
-    if (state.total === 0) { reset(); return; }
-    const ok = window.confirm("شمارش فعلی صفر شود؟");
-    if (ok) reset();
-  });
-
-  window.addEventListener("resize", () => {
-    buildBeadRing();
-    renderBeads();
-  });
-
-  // ---- init ----
-  loadState();
-  buildBeadRing();
-  render();
-
-  // ---- register service worker for offline use ----
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("service-worker.js").catch(() => {});
-    });
-  }
-
-  // ---- install to home screen ----
-  if (window.self !== window.top) {
-    document.body.classList.add("embedded-preview");
-  }
-  const installBtn = document.getElementById("installBtn");
-  const installModal = document.getElementById("installModal");
-  const installModalText = document.getElementById("installModalText");
-  const installModalClose = document.getElementById("installModalClose");
-  let deferredInstallPrompt = null;
-
-  const isStandalone = window.matchMedia("(display-mode: standalone)").matches
-    || window.navigator.standalone === true;
-
-  function manualInstallMessage() {
-    const ua = navigator.userAgent;
-    if (/iphone|ipad|ipod/i.test(ua)) {
-      return "برای نصب: پایین صفحه دکمه اشتراک‌گذاری (Share) را در سافاری بزنید، سپس «Add to Home Screen» را انتخاب کنید.";
-    }
-    if (/android/i.test(ua)) {
-      return "برای نصب: از منوی سه‌نقطه بالای مرورگر گزینه «Add to Home screen» یا «Install app» را بزنید.";
-    }
-    return "برای نصب: از منوی مرورگر گزینه «Install App» یا «Add to Home Screen» را انتخاب کنید.";
-  }
-
-  function openInstallModal() {
-    installModalText.textContent = manualInstallMessage();
-    installModal.hidden = false;
-  }
-
-  if (!isStandalone && installBtn) {
-    installBtn.hidden = false;
-
-    window.addEventListener("beforeinstallprompt", (e) => {
-      e.preventDefault();
-      deferredInstallPrompt = e;
-    });
-
-    installBtn.addEventListener("click", async () => {
-      if (deferredInstallPrompt) {
-        deferredInstallPrompt.prompt();
-        await deferredInstallPrompt.userChoice;
-        deferredInstallPrompt = null;
-      } else {
-        openInstallModal();
-      }
-    });
-
-    window.addEventListener("appinstalled", () => {
-      installBtn.hidden = true;
-    });
-  }
-
-  if (installModalClose) {
-    installModalClose.addEventListener("click", () => { installModal.hidden = true; });
-  }
-  if (installModal) {
-    installModal.addEventListener("click", (e) => {
-      if (e.target === installModal) installModal.hidden = true;
-    });
-  }
-
-  // arriving from the landing page's "download app" button
-  if (location.hash === "#install" && !isStandalone) {
-    setTimeout(() => {
-      if (deferredInstallPrompt) {
-        installBtn.classList.add("pulse");
-      } else {
-        openInstallModal();
-      }
-    }, 400);
-  }
+function increment(e){state.total++;
+  const goal=Math.max(1,Number(extra.goal)||100);
+  if(state.total>=goal){ announceGoal(goal); }state.inRound++;updateHistory();if(state.inRound>=TOTAL_BEADS){state.inRound=0;state.rounds++;counterWrap.classList.add('ring-complete');setTimeout(()=>counterWrap.classList.remove('ring-complete'),550);vibrate([15,40,15])}else vibrate(12);if(state.total>state.best)state.best=state.total;save();render();pulse();ripple(e)}
+function decrement(){if(state.total<=0)return;state.total--;if(state.inRound>0)state.inRound--;else if(state.rounds>0){state.rounds--;state.inRound=32}save();render();vibrate(8)}
+function reset(){state.total=0;state.inRound=0;state.rounds=0;save();render()}
+clickBtn.addEventListener('click',increment);minusBtn.addEventListener('click',decrement);resetBtn.addEventListener('click',()=>{if(!state.total||confirm('شمارش فعلی صفر شود؟'))reset()});window.addEventListener('resize',()=>{buildBeads();render()});
+const panel=$('appPanel'),title=$('panelTitle'),content=$('panelContent'),close=$('panelClose');let active='home';
+function statsHtml(){const tc=todayCount(),goal=Math.max(1,extra.goal),pct=Math.min(100,tc/goal*100),days=Object.entries(extra.history).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,7);return `<div class="panel-card"><span class="panel-small">امروز</span><br><strong>${toFa(tc)}</strong><span class="panel-small"> از ${toFa(goal)} صلوات</span><div class="goal-bar"><i style="width:${pct}%"></i></div></div><div class="panel-card"><div class="panel-row"><span>مجموع صلوات</span><strong>${toFa(state.total)}</strong></div><div class="panel-row"><span>بیشترین صلوات</span><strong>${toFa(state.best)}</strong></div><div class="panel-row"><span>دورهای کامل</span><strong>${toFa(state.rounds)}</strong></div></div><div class="panel-card"><b>تاریخچه اخیر</b>${days.length?days.map(([d,n])=>`<div class="history-line"><span>${d}</span><strong>${toFa(n)}</strong></div>`).join(''):'<p class="panel-small">هنوز تاریخچه‌ای ثبت نشده است.</p>'}</div>`}
+function settingsHtml(){return `<div class="panel-card"><div class="panel-row"><span>حالت شب</span><input id="panelDark" type="checkbox" ${extra.dark?'checked':''}></div><div class="panel-row"><span>صدای صلوات</span><input id="panelSound" type="checkbox" ${extra.sound?'checked':''}></div><div class="panel-row"><span>لرزش</span><input id="panelVibrate" type="checkbox" ${extra.vibrate?'checked':''}></div><div class="panel-row"><span>هدف روزانه</span><span>${toFa(extra.goal)}</span></div><div class="goal-buttons">${[33,100,313,1000].map(n=>`<button data-goal="${n}">${toFa(n)}</button>`).join('')}</div><button id="panelReset" class="ghost-btn danger" style="width:100%;margin-top:14px">ریست شمارش فعلی</button></div><p class="panel-small">حالت شب فقط ظاهر رنگی برنامه را تغییر می‌دهد و طراحی اصلی، حلقه ۳۳تایی و دکمه صلوات حفظ می‌شوند.</p>`}
+function openPanel(which){active=which;document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.panel===which));if(which==='home'){panel.hidden=true;document.querySelector('.card')?.scrollIntoView({behavior:'smooth',block:'start'});return}panel.hidden=false;title.textContent=which==='stats'?'آمار و تاریخچه':'تنظیمات';content.innerHTML=which==='stats'?statsHtml():settingsHtml();bindPanel()}
+function bindPanel(){const d=$('panelDark');if(d)d.onchange=()=>{extra.dark=d.checked;save();render();openPanel('settings')};const so=$('panelSound');if(so)so.onchange=()=>{extra.sound=so.checked;save()};const v=$('panelVibrate');if(v)v.onchange=()=>{extra.vibrate=v.checked;save()};document.querySelectorAll('[data-goal]').forEach(b=>b.onclick=()=>{extra.goal=Number(b.dataset.goal);save();render();openPanel('settings')});const rr=$('panelReset');if(rr)rr.onclick=()=>{if(confirm('شمارش فعلی صفر شود؟')){reset();openPanel('settings')}}}
+document.querySelectorAll('.nav-item').forEach(b=>b.addEventListener('click',()=>openPanel(b.dataset.panel)));close.addEventListener('click',()=>openPanel('home'));panel.addEventListener('click',e=>{if(e.target===panel)openPanel('home')});
+// install
+const installBtn=$('installBtn'),installModal=$('installModal'),installText=$('installModalText'),installClose=$('installModalClose');let deferred=null;const standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;function installMsg(){return /android/i.test(navigator.userAgent)?'از منوی مرورگر گزینه «Install app» یا «Add to Home screen» را انتخاب کنید.':'از منوی مرورگر گزینه «Install App» یا «Add to Home Screen» را انتخاب کنید.'}if(!standalone){installBtn.hidden=false;addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e});installBtn.onclick=async()=>{if(deferred){deferred.prompt();await deferred.userChoice;deferred=null}else{installText.textContent=installMsg();installModal.hidden=false}}}installClose.onclick=()=>installModal.hidden=true;installModal.onclick=e=>{if(e.target===installModal)installModal.hidden=true};
+if('serviceWorker'in navigator)addEventListener('load',()=>navigator.serviceWorker.register('service-worker.js').catch(()=>{}));if(self!==top)document.body.classList.add('embedded-preview');buildBeads();render();
 })();
